@@ -1,9 +1,841 @@
-<!-- Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ระบบสต็อกกิจกรรม - Enterprise UI V9 (แก้ไขสินค้าแบบ Popup)</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#245a92">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  *{box-sizing:border-box;font-family:'Segoe UI','Prompt',sans-serif;}
+  body{margin:0;background:#edf1f7;color:#1f2933;}
+  :root{
+    --primary:#245a92;
+    --primary-soft:#e4edf9;
+    --sidebar:#1f3554;
+    --accent:#ff8c42;
+  }
+  header{
+    background:linear-gradient(90deg,#23466f,#245a92);
+    color:white;padding:14px 22px;font-size:20px;
+    display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 2px 10px rgba(15,23,42,0.35);
+    position:sticky;top:0;z-index:10;
+  }
+  header .title{display:flex;align-items:center;gap:10px;font-weight:600;}
+  header .logo{
+    width:34px;height:34px;border-radius:12px;
+    background:#ffffff22;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+  }
+
+  .layout{display:flex;min-height:calc(100vh - 62px);}
+
+  .sidebar{
+    width:240px;background:var(--sidebar);color:#e4ecf5;
+    padding:18px 12px;display:flex;flex-direction:column;gap:18px;
+    box-shadow:4px 0 12px rgba(15,23,42,0.35);
+  }
+  .nav-section-title{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.08em;
+    opacity:0.7;margin:4px 0 8px 6px;
+  }
+  .nav-btn{
+    width:100%;text-align:left;padding:10px 12px;border-radius:16px;
+    border:none;background:transparent;color:#e4ecf5;
+    display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;
+    transition:background 0.15s,transform 0.05s,box-shadow 0.15s;
+  }
+  .nav-btn .icon{width:18px;text-align:center;font-size:16px;}
+  .nav-btn.active{
+    background:#284874;
+    box-shadow:0 3px 10px rgba(0,0,0,0.35);
+  }
+  .nav-btn:hover{background:#263d63;}
+  .nav-footer{
+    margin-top:auto;font-size:11px;opacity:0.75;padding:4px 6px;
+  }
+
+  .main{flex:1;padding:18px 20px;overflow:auto;}
+  .section{display:none;}
+  .section.active{display:block;}
+
+  .section-title{
+    font-size:20px;font-weight:600;margin:4px 0 8px;color:var(--primary);
+  }
+  .section-subtitle{
+    font-size:13px;color:#6b7280;margin-bottom:14px;
+  }
+
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;
+  }
+
+  .card{
+    background:#ffffff;border-radius:18px;padding:18px 20px;
+    border:1px solid #dde4ef;
+    box-shadow:0 10px 25px rgba(15,23,42,0.10);
+  }
+
+  .stat-label{font-size:13px;color:#6b7280;}
+  .stat-value{font-size:24px;font-weight:600;margin-top:4px;color:#111827;}
+
+  .toolbar{
+    display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;margin-bottom:6px;
+  }
+
+  input,select,textarea{
+    width:100%;padding:9px 10px;border-radius:9px;
+    border:1px solid #c5ced9;background:#f9fbfd;color:#1f2933;font-size:14px;
+    transition:border 0.15s,box-shadow 0.15s,background 0.15s;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(36,90,146,0.18);
+    background:#ffffff;
+  }
+  textarea{resize:vertical;min-height:70px;}
+
+  label{font-size:13px;color:#4b5563;margin-bottom:4px;display:block;}
+
+  button{
+    padding:9px 16px;border:none;border-radius:999px;cursor:pointer;
+    font-size:14px;margin:2px 3px;
+    display:inline-flex;align-items:center;gap:6px;
+    transition:background 0.15s,box-shadow 0.15s,transform 0.05s;
+  }
+  .btn-primary{background:var(--primary);color:white;}
+  .btn-primary:hover{background:#1f4b7a;box-shadow:0 4px 10px rgba(36,90,146,0.35);transform:translateY(-1px);}
+  .btn-out{background:var(--accent);color:white;}
+  .btn-out:hover{background:#ff7a23;box-shadow:0 4px 10px rgba(255,140,66,0.35);transform:translateY(-1px);}
+  .btn-outline{background:white;border:1px solid var(--primary);color:var(--primary);}
+  .btn-outline:hover{background:var(--primary-soft);}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px;}
+  th{background:#e1e8f0;color:#374151;font-weight:600;}
+  th,td{padding:9px;border:1px solid #d0d7e0;font-size:13px;}
+  tr:nth-child(even){background:#f7f9fb;}
+  .text-right{text-align:right;}
+
+  .history-card{
+    background:#f9fbff;border:1px solid #d0d7e8;border-radius:12px;
+    padding:12px 14px;margin-bottom:10px;font-size:13px;
+  }
+  .history-meta{font-size:12px;color:#6b7280;}
+
+  .popup-overlay{
+    position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(15,23,42,0.45);z-index:9999;
+  }
+  .popup-card{
+    background:#ffffff;min-width:280px;max-width:560px;
+    border-radius:16px;box-shadow:0 18px 40px rgba(15,23,42,0.55);
+    padding:18px 18px 14px;
+    animation:popIn 0.18s ease-out;
+  }
+  .popup-title{
+    font-weight:600;font-size:17px;color:var(--primary);margin-bottom:6px;
+  }
+  .popup-body{
+    font-size:14px;color:#374151;margin-bottom:12px;max-height:60vh;overflow:auto;
+  }
+  .popup-footer{text-align:right;}
+  @keyframes popIn{
+    from{transform:translateY(10px) scale(0.97);opacity:0;}
+    to{transform:translateY(0) scale(1);opacity:1;}
+  }
+
+  @media (max-width:900px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;overflow-x:auto;}
+    .sidebar .nav-section-title,.nav-footer{display:none;}
+  }
+</style>
+</head>
+
+<body>
+<header>
+  <div class="title">
+    <div class="logo">📦</div>
+    <div>
+      <div>ระบบสต็อกกิจกรรม</div>
+      <div class="subtitle">เวอร์ชันองค์กร V9 – สต็อก, เบิก, สรุปยอด</div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div>
+      <div class="nav-section-title">เมนูหลัก</div>
+      <button class="nav-btn active" data-view="dashboard">
+        <span class="icon">📊</span><span>Dashboard</span>
+      </button>
+      <button class="nav-btn" data-view="stock">
+        <span class="icon">📦</span><span>สต็อกคงเหลือ</span>
+      </button>
+      <button class="nav-btn" data-view="add">
+        <span class="icon">➕</span><span>เพิ่ม / แก้ไขอุปกรณ์</span>
+      </button>
+      <button class="nav-btn" data-view="issue">
+        <span class="icon">📤</span><span>เบิกสินค้า</span>
+      </button>
+      <button class="nav-btn" data-view="history">
+        <span class="icon">📜</span><span>ประวัติการเบิก</span>
+      </button>
+    </div>
+
+    <div>
+      <div class="nav-section-title">ข้อมูล</div>
+      <button class="nav-btn" id="btnImport">
+        <span class="icon">📥</span><span>นำเข้าข้อมูล</span>
+      </button>
+      <button class="nav-btn" id="btnExportAll">
+        <span class="icon">📤</span><span>ส่งออกทั้งหมด</span>
+      </button>
+    </div>
+
+    <div class="nav-footer">
+      ข้อมูลถูกเก็บในเครื่องนี้ (LocalStorage)
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="view-dashboard" class="section active">
+      <div class="section-title">ภาพรวมสต็อก</div>
+      <div class="section-subtitle">ภาพรวมจำนวน, มูลค่า และสรุปยอดการเบิกตามวัน / เดือน</div>
+      <div class="grid">
+        <div class="card">
+          <div class="stat-label">จำนวนรายการสินค้า</div>
+          <div id="stat_total_items" class="stat-value">0 รายการ</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">จำนวนคงเหลือรวม (ชิ้น)</div>
+          <div id="stat_total_qty" class="stat-value">0 ชิ้น</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">มูลค่าสินค้ารวม (บาท)</div>
+          <div id="stat_total_value" class="stat-value">0.00</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">จำนวนรายการที่ใกล้หมด</div>
+          <div id="stat_low_stock" class="stat-value">0 รายการ</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn-primary" id="btnSummaryDay">
+          <span class="btn-icon">📅</span><span>สรุปยอดวันนี้</span>
+        </button>
+        <button class="btn-outline" id="btnSummaryMonth">
+          <span class="btn-icon">🗓️</span><span>สรุปยอดเดือนนี้</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="view-stock" class="section">
+      <div class="section-title">สต็อกคงเหลือทั้งหมด</div>
+      <div class="section-subtitle">ตรวจสอบสต็อกปัจจุบัน พร้อมวันที่เพิ่มและหมายเหตุ</div>
+      <div class="toolbar">
+        <input id="search" placeholder="ค้นหาชื่ออุปกรณ์..." style="max-width:260px;">
+        <button class="btn-outline" id="btnExportStock">
+          <span class="btn-icon">📤</span><span>ส่งออกสต็อก</span>
+        </button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่ออุปกรณ์</th>
+              <th>จำนวน</th>
+              <th>ราคา/หน่วย</th>
+              <th>มูลค่ารวม</th>
+              <th>แจ้งเตือนเมื่อ ≤</th>
+              <th>วันที่เพิ่ม</th>
+              <th>หมายเหตุ</th>
+              <th>การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody id="stockTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-add" class="section">
+      <div class="section-title">เพิ่ม / แก้ไขข้อมูลอุปกรณ์</div>
+      <div class="section-subtitle">กรอกข้อมูลอุปกรณ์และวันที่เพิ่มเข้าโกดัง</div>
+      <div class="card">
+        <div class="grid">
+          <div>
+            <label>ชื่ออุปกรณ์</label>
+            <input id="name" placeholder="เช่น น้ำมันเครื่อง, ไขควงชุด">
+          </div>
+          <div>
+            <label>จำนวนเริ่มต้น (ชิ้น)</label>
+            <input id="qty" type="number" placeholder="เช่น 10">
+          </div>
+          <div>
+            <label>ราคา/หน่วย (บาท)</label>
+            <input id="price" type="number" step="0.01" placeholder="เช่น 150">
+          </div>
+          <div>
+            <label>แจ้งเตือนเมื่อจำนวน ≤ (ชิ้น)</label>
+            <input id="threshold" type="number" placeholder="เช่น 5">
+          </div>
+          <div>
+            <label>วันที่เพิ่ม</label>
+            <input id="date_add" type="date">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>หมายเหตุ</label>
+          <textarea id="note" placeholder="รายละเอียดเพิ่มเติม เช่น รุ่น, จุดใช้งาน, หมายเหตุอื่น ๆ"></textarea>
+        </div>
+        <br>
+        <button class="btn-primary" id="btnSaveItem">
+          <span class="btn-icon">💾</span><span>บันทึกข้อมูล</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="view-issue" class="section">
+      <div class="section-title">บันทึกการเบิกสินค้าออกไปใช้งาน</div>
+      <div class="section-subtitle">เลือกอุปกรณ์ กรอกจำนวน ผู้เบิก และวันที่เบิกให้ครบ</div>
+      <div class="card">
+        <div class="grid">
+          <div>
+            <label>เลือกอุปกรณ์จากสต็อก</label>
+            <select id="use_name"></select>
+          </div>
+          <div>
+            <label>จำนวนที่เบิก (ชิ้น)</label>
+            <input id="use_qty" type="number">
+          </div>
+          <div>
+            <label>ผู้เบิก</label>
+            <input id="use_by" placeholder="ชื่อผู้เบิก">
+          </div>
+          <div>
+            <label>วันที่เบิก</label>
+            <input id="use_date" type="date">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>หมายเหตุ</label>
+          <textarea id="use_note" placeholder="ระบุวัตถุประสงค์ จุดที่นำไปใช้ หรือข้อมูลอื่น ๆ"></textarea>
+        </div>
+        <br>
+        <button class="btn-out" id="btnUseItem">
+          <span class="btn-icon">✔</span><span>บันทึกการเบิก</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="view-history" class="section">
+      <div class="section-title">ประวัติการเบิกสินค้า</div>
+      <div class="section-subtitle">ตรวจสอบรายการเบิกย้อนหลัง พร้อมวันที่เบิกและผู้เบิก</div>
+      <div class="toolbar">
+        <button class="btn-outline" id="btnExportHistory">
+          <span class="btn-icon">📤</span><span>ส่งออกประวัติ</span>
+        </button>
+      </div>
+      <div id="useHistory"></div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="importFile" style="display:none" accept=".json">
+
+<!-- Popup (general) -->
+<div id="popupOverlay" class="popup-overlay">
+  <div class="popup-card">
+    <div id="popupTitle" class="popup-title">แจ้งเตือน</div>
+    <div id="popupBody" class="popup-body"></div>
+    <div class="popup-footer">
+      <button class="btn-primary" id="btnClosePopup">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Edit (จำนวนถูกล็อกไว้ตามที่คุณเลือก B) -->
+<div id="popupEdit" class="popup-overlay" aria-hidden="true">
+  <div class="popup-card">
+    <div class="popup-title">แก้ไขสินค้า</div>
+    <div class="popup-body">
+      <label>ชื่ออุปกรณ์</label>
+      <input id="edit_name">
+
+      <label>จำนวน (ชิ้น) — (ล็อกไว้ ไม่อนุญาตให้แก้โดยตรง)</label>
+      <input id="edit_qty" type="number" disabled>
+
+      <label>ราคา/หน่วย (บาท)</label>
+      <input id="edit_price" type="number" step="0.01">
+
+      <label>แจ้งเตือนเมื่อจำนวน ≤</label>
+      <input id="edit_threshold" type="number">
+
+      <label>หมายเหตุ</label>
+      <textarea id="edit_note"></textarea>
+
+      <input type="hidden" id="edit_index">
+    </div>
+
+    <div class="popup-footer">
+      <button class="btn-primary" id="btnSaveEdit">บันทึก</button>
+      <button class="btn-outline" id="btnCloseEdit">ปิด</button>
+    </div>
+  </div>
+</div>
 
 <script>
-/* ================= Firebase Init ================= */
+var items = [];
+var historyData = [];
+
+/* Popup */
+function showPopup(title, content, isHtml){
+  document.getElementById("popupTitle").innerText = title || "แจ้งเตือน";
+  var body = document.getElementById("popupBody");
+  if(isHtml){ body.innerHTML = content; }
+  else{ body.innerText = content; }
+  document.getElementById("popupOverlay").style.display = "flex";
+}
+function hidePopup(){
+  document.getElementById("popupOverlay").style.display = "none";
+}
+
+/* LocalStorage */
+function loadData(){
+  try{
+    items = JSON.parse(localStorage.getItem("WEB_STOCK_ITEMS") || "[]");
+    historyData = JSON.parse(localStorage.getItem("WEB_STOCK_HISTORY") || "[]");
+  }catch(e){
+    items=[]; historyData=[];
+  }
+}
+function saveData(){
+  localStorage.setItem("WEB_STOCK_ITEMS", JSON.stringify(items));
+  localStorage.setItem("WEB_STOCK_HISTORY", JSON.stringify(historyData));
+}
+
+/* Form clear */
+function clearAddForm(){
+  document.getElementById("name").value="";
+  document.getElementById("qty").value="";
+  document.getElementById("price").value="";
+  document.getElementById("threshold").value="";
+  document.getElementById("date_add").value="";
+  document.getElementById("note").value="";
+}
+function clearIssueForm(){
+  document.getElementById("use_qty").value="";
+  document.getElementById("use_by").value="";
+  document.getElementById("use_date").value="";
+  document.getElementById("use_note").value="";
+}
+
+/* Dropdown */
+function updateDropdown(){
+  var sel = document.getElementById("use_name");
+  sel.innerHTML = "";
+  if(items.length===0){
+    var opt=document.createElement("option");
+    opt.value=""; opt.textContent="ยังไม่มีข้อมูลสต็อก";
+    sel.appendChild(opt);
+    return;
+  }
+  items.forEach(function(x){
+    var opt=document.createElement("option");
+    opt.value=x.name;
+    opt.textContent=x.name + " (เหลือ " + (x.qty||0) + ")";
+    sel.appendChild(opt);
+  });
+}
+
+/* Render stock */
+function renderStock(){
+  var tb=document.getElementById("stockTable");
+  var searchEl=document.getElementById("search");
+  var keyword = searchEl ? (searchEl.value || "").toLowerCase() : "";
+  tb.innerHTML="";
+  items.forEach(function(x,idx){
+    if(keyword && x.name.toLowerCase().indexOf(keyword)===-1) return;
+    var tr=document.createElement("tr");
+
+    function td(text, cls){
+      var td=document.createElement("td");
+      if(cls) td.className=cls;
+      td.textContent=text;
+      return td;
+    }
+
+    tr.appendChild(td(x.name,""));
+    tr.appendChild(td(x.qty||0,"text-right"));
+    tr.appendChild(td(Number(x.price||0).toFixed(2),"text-right"));
+    tr.appendChild(td((Number(x.qty||0)*Number(x.price||0)).toFixed(2),"text-right"));
+    tr.appendChild(td(x.threshold||0,"text-right"));
+    tr.appendChild(td(x.date_add || "-",""));
+    tr.appendChild(td(x.note || "",""));
+
+    var tdActions=document.createElement("td");
+
+    var btnEdit=document.createElement("button");
+    btnEdit.className="btn-primary btn-edit";
+    btnEdit.textContent="แก้ไข";
+    btnEdit.dataset.index=idx;
+    tdActions.appendChild(btnEdit);
+
+    var btnDel=document.createElement("button");
+    btnDel.className="btn-outline btn-delete";
+    btnDel.textContent="ลบ";
+    btnDel.dataset.index=idx;
+    tdActions.appendChild(btnDel);
+
+    tr.appendChild(tdActions);
+    tb.appendChild(tr);
+  });
+
+  var low = items.filter(function(x){return Number(x.qty||0) <= Number(x.threshold||0) && Number(x.threshold||0) > 0;}).length;
+  document.getElementById("stat_low_stock").innerText = low+" รายการ";
+}
+
+/* Render dashboard */
+function renderDashboard(){
+  var totalItems = items.length;
+  var totalQty = items.reduce(function(s,x){return s+Number(x.qty||0);},0);
+  var totalValue = items.reduce(function(s,x){return s+Number(x.qty||0)*Number(x.price||0);},0);
+  var low = items.filter(function(x){return Number(x.qty||0) <= Number(x.threshold||0) && Number(x.threshold||0) > 0;}).length;
+
+  document.getElementById("stat_total_items").innerText = totalItems+" รายการ";
+  document.getElementById("stat_total_qty").innerText = totalQty+" ชิ้น";
+  document.getElementById("stat_total_value").innerText = totalValue.toFixed(2);
+  document.getElementById("stat_low_stock").innerText = low+" รายการ";
+}
+
+/* Render history */
+function renderHistory(){
+  var div = document.getElementById("useHistory");
+  div.innerHTML = "";
+
+  if (!historyData.length){
+    div.innerHTML = "<i>ยังไม่มีประวัติการเบิก</i>";
+    return;
+  }
+
+  historyData.slice().reverse().forEach(function(x){
+    var box = document.createElement("div");
+    box.className = "history-card";
+    box.innerHTML = 
+      "<b>"+x.name+"</b> — เบิก "+x.qty+" ชิ้น<br>" +
+      "<span class='history-meta'>" +
+      "ผู้เบิก: "+x.by+"<br>" +
+      "วันที่เบิก: "+(x.date || "-")+"<br>" +
+      "หมายเหตุ: "+(x.note || "-")+"<br>" +
+      "บันทึกเมื่อ: "+(x.time || "-") +
+      "</span>";
+    div.appendChild(box);
+  });
+}
+
+/* Save item (เพิ่มสินค้า = รวมสต็อกเดิม + ใหม่) */
+function saveItem(){
+  var n=document.getElementById("name").value.trim();
+  var q=Number(document.getElementById("qty").value)||0;
+  var p=Number(document.getElementById("price").value)||0;
+  var t=Number(document.getElementById("threshold").value)||0;
+  var date_add=document.getElementById("date_add").value;
+  var note=document.getElementById("note").value.trim();
+
+  if(!n){
+    showPopup("แจ้งเตือน","กรุณากรอกชื่ออุปกรณ์");
+    return;
+  }
+  if(q<0){
+    showPopup("แจ้งเตือน","จำนวนต้องไม่ติดลบ");
+    return;
+  }
+
+  var existing = null;
+  for(var i=0;i<items.length;i++){
+    if(items[i].name===n){ existing=items[i]; break; }
+  }
+  if(existing){
+    existing.qty = (Number(existing.qty) || 0) + q;   // รวมสต็อกเดิม + ใหม่
+    existing.price = p;
+    existing.threshold = t;
+    existing.date_add = date_add;
+    existing.note = note;
+  }else{
+    items.push({name:n,qty:q,price:p,threshold:t,date_add:date_add,note:note});
+  }
+
+  saveData();
+  updateDropdown();
+  renderStock();
+  renderDashboard();
+  clearAddForm();
+  showPopup("สำเร็จ","บันทึกข้อมูลอุปกรณ์เรียบร้อยแล้ว");
+}
+
+/* Use item (บันทึกการเบิก) */
+function useItem(){
+  var sel=document.getElementById("use_name");
+  var name=sel.value;
+  var qty=Number(document.getElementById("use_qty").value)||0;
+  var by=document.getElementById("use_by").value.trim();
+  var date=document.getElementById("use_date").value;
+  var note=document.getElementById("use_note").value.trim();
+
+  if(!name || !by || !date){
+    showPopup("แจ้งเตือน","กรุณากรอกข้อมูลให้ครบ (อุปกรณ์, ผู้เบิก, วันที่เบิก)");
+    return;
+  }
+  if(qty<=0){
+    showPopup("แจ้งเตือน","จำนวนที่เบิกต้องมากกว่า 0");
+    return;
+  }
+
+  var item=null;
+  for(var i=0;i<items.length;i++){
+    if(items[i].name===name){ item=items[i]; break; }
+  }
+  if(!item){
+    showPopup("แจ้งเตือน","ไม่พบสินค้าในสต็อก");
+    return;
+  }
+  item.qty = Number(item.qty)||0;
+  if(item.qty < qty){
+    showPopup("แจ้งเตือน","สินค้าไม่พอในสต็อก (คงเหลือ "+item.qty+")");
+    return;
+  }
+
+  item.qty -= qty;
+  historyData.push({
+    name:name,
+    qty:qty,
+    by:by,
+    date:date,
+    note:note,
+    time:new Date().toLocaleString()
+  });
+
+  saveData();
+  updateDropdown();
+  renderStock();
+  renderHistory();
+  renderDashboard();
+  clearIssueForm();
+  showPopup("สำเร็จ ✔","บันทึกการเบิกสินค้าเรียบร้อยแล้ว");
+}
+
+/* Delete item */
+function deleteItemByIndex(idx){
+  if(idx<0 || idx>=items.length) return;
+  var name=items[idx].name;
+  if(!confirm("ต้องการลบอุปกรณ์ '"+name+"' ออกจากสต็อกหรือไม่?")) return;
+  items.splice(idx,1);
+  saveData();
+  updateDropdown();
+  renderStock();
+  renderDashboard();
+}
+
+/* Summary */
+function showSummary(mode){
+  var today=new Date();
+  var todayStr=today.toISOString().slice(0,10);
+  var ym=todayStr.slice(0,7);
+
+  var filtered=historyData.filter(function(x){
+    if(!x.date) return false;
+    if(mode==="day") return x.date===todayStr;
+    if(mode==="month") return x.date.slice(0,7)===ym;
+    return false;
+  });
+
+  var title = (mode==="day") ? "สรุปยอดการเบิก วันนี้" : "สรุปยอดการเบิก เดือนนี้";
+  if(filtered.length===0){
+    showPopup(title,"ยังไม่มีการเบิกในช่วงนี้");
+    return;
+  }
+
+  var totalQty=0;
+  var byItem={};
+  for(var i=0;i<filtered.length;i++){
+    var h=filtered[i];
+    var q=Number(h.qty||0);
+    totalQty+=q;
+    if(!byItem[h.name]) byItem[h.name]=0;
+    byItem[h.name]+=q;
+  }
+
+  var html="<p>จำนวนครั้งที่เบิก: <b>"+filtered.length+"</b><br>จำนวนที่เบิกรวมทั้งหมด: <b>"+totalQty+"</b> ชิ้น</p>";
+  html+="<p><b>รายละเอียดแยกตามอุปกรณ์</b></p><ul>";
+  for(var n in byItem){
+    if(byItem.hasOwnProperty(n)){
+      html+="<li>"+n+" : "+byItem[n]+" ชิ้น</li>";
+    }
+  }
+  html+="</ul>";
+  var totalNow=items.reduce(function(s,x){return s+Number(x.qty||0);},0);
+  html+="<p>สต็อกคงเหลือรวมปัจจุบัน: <b>"+totalNow+"</b> ชิ้น</p>";
+
+  showPopup(title,html,true);
+}
+
+/* Export / Import */
+function downloadJSON(obj,filename){
+  var json=JSON.stringify(obj,null,2);
+  var blob=new Blob([json],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function exportAll(){downloadJSON({items:items,history:historyData},"stock_all.json");}
+function exportStock(){downloadJSON({items:items},"stock_only.json");}
+function exportHistory(){downloadJSON({history:historyData},"stock_history.json");}
+
+/* Navigation */
+function setupNav(){
+  var buttons=document.querySelectorAll(".nav-btn[data-view]");
+  buttons.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var view=btn.getAttribute("data-view");
+      buttons.forEach(function(b){b.classList.remove("active");});
+      btn.classList.add("active");
+      document.querySelectorAll(".section").forEach(function(sec){
+        sec.classList.remove("active");
+      });
+      var target=document.getElementById("view-"+view);
+      if(target) target.classList.add("active");
+      if(view==="dashboard") renderDashboard();
+      if(view==="stock") renderStock();
+      if(view==="history") renderHistory();
+    });
+  });
+}
+
+/* Edit popup handlers */
+function openEditPopup(idx){
+  var item = items[idx];
+  if(!item) return;
+
+  document.getElementById("edit_name").value = item.name;
+  document.getElementById("edit_qty").value = item.qty;
+  document.getElementById("edit_price").value = item.price;
+  document.getElementById("edit_threshold").value = item.threshold;
+  document.getElementById("edit_note").value = item.note;
+  document.getElementById("edit_index").value = idx;
+
+  document.getElementById("popupEdit").style.display = "flex";
+}
+
+/* Init */
+document.addEventListener("DOMContentLoaded",function(){
+  document.getElementById("btnClosePopup").addEventListener("click",hidePopup);
+
+  document.getElementById("btnSaveItem").addEventListener("click",saveItem);
+  document.getElementById("btnUseItem").addEventListener("click",useItem);
+  document.getElementById("btnSummaryDay").addEventListener("click",function(){showSummary("day");});
+  document.getElementById("btnSummaryMonth").addEventListener("click",function(){showSummary("month");});
+  document.getElementById("btnExportStock").addEventListener("click",exportStock);
+  document.getElementById("btnExportHistory").addEventListener("click",exportHistory);
+  document.getElementById("btnExportAll").addEventListener("click",exportAll);
+
+  document.getElementById("btnImport").addEventListener("click",function(){
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change",function(e){
+    var file=e.target.files[0];
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        if(data.items) items=data.items;
+        if(data.history) historyData=data.history;
+        saveData();
+        loadData();
+        updateDropdown();
+        renderStock();
+        renderDashboard();
+        renderHistory();
+        showPopup("สำเร็จ","นำเข้าข้อมูลเรียบร้อยแล้ว");
+      }catch(err){
+        showPopup("แจ้งเตือน","ไฟล์ไม่ถูกต้อง");
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  var search=document.getElementById("search");
+  if(search){ search.addEventListener("input",renderStock); }
+
+  document.getElementById("stockTable").addEventListener("click",function(e){
+    if(e.target.classList.contains("btn-delete")){
+      var idx=parseInt(e.target.dataset.index,10);
+      if(!isNaN(idx)) deleteItemByIndex(idx);
+    }
+    if(e.target.classList.contains("btn-edit")){
+      var idx=parseInt(e.target.dataset.index,10);
+      if(!isNaN(idx)) openEditPopup(idx);
+    }
+  });
+
+  document.getElementById("btnSaveEdit").addEventListener("click", function(){
+    var idx = Number(document.getElementById("edit_index").value);
+    var item = items[idx];
+    if(!item) return;
+
+    // ไม่อนุญาตให้แก้จำนวนโดยตรง (ตามตัวเลือก B)
+    item.name = document.getElementById("edit_name").value.trim();
+    // item.qty = Number(document.getElementById("edit_qty").value) || 0; // locked
+    item.price = Number(document.getElementById("edit_price").value) || 0;
+    item.threshold = Number(document.getElementById("edit_threshold").value) || 0;
+    item.note = document.getElementById("edit_note").value.trim();
+
+    saveData();
+    renderStock();
+    updateDropdown();
+    renderDashboard();
+
+    document.getElementById("popupEdit").style.display = "none";
+    showPopup("สำเร็จ", "แก้ไขสินค้าเรียบร้อยแล้ว");
+  });
+
+  document.getElementById("btnCloseEdit").addEventListener("click", function(){
+    document.getElementById("popupEdit").style.display = "none";
+  });
+
+  setupNav();
+  loadData();
+  updateDropdown();
+  renderStock();
+  renderDashboard();
+  renderHistory();
+});
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
+
+
+<!-- ================= Realtime Firebase Override ================= -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyBo8aIL2e1XLdS4BeOPEreXaA3IyWDTiHY",
   authDomain: "stock-69302.firebaseapp.com",
@@ -15,118 +847,30 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ================= Data ================= */
-var items = [];
-var historyData = [];
-
-/* ================= Popup ================= */
-function showPopup(title, content, isHtml){
-  document.getElementById("popupTitle").innerText = title || "แจ้งเตือน";
-  var body = document.getElementById("popupBody");
-  body[isHtml ? "innerHTML" : "innerText"] = content;
-  document.getElementById("popupOverlay").style.display = "flex";
-}
-function hidePopup(){
-  document.getElementById("popupOverlay").style.display = "none";
-}
-
-/* ================= Firestore Realtime ================= */
 function listenRealtime(){
   db.collection("items").onSnapshot(snap=>{
     items = [];
-    snap.forEach(doc=>{
-      items.push({ id: doc.id, ...doc.data() });
-    });
+    snap.forEach(doc=> items.push({id:doc.id, ...doc.data()}));
     updateDropdown();
     renderStock();
     renderDashboard();
   });
-
   db.collection("history").orderBy("time","asc").onSnapshot(snap=>{
     historyData = [];
-    snap.forEach(doc=>{
-      historyData.push(doc.data());
-    });
+    snap.forEach(doc=> historyData.push(doc.data()));
     renderHistory();
   });
 }
 
-/* ================= Dropdown ================= */
-function updateDropdown(){
-  var sel = document.getElementById("use_name");
-  sel.innerHTML = "";
-  if(!items.length){
-    var opt=document.createElement("option");
-    opt.textContent="ยังไม่มีข้อมูลสต็อก";
-    sel.appendChild(opt);
-    return;
-  }
-  items.forEach(x=>{
-    var opt=document.createElement("option");
-    opt.value=x.name;
-    opt.textContent = x.name+" (เหลือ "+(x.qty||0)+")";
-    sel.appendChild(opt);
-  });
-}
-
-/* ================= Render ================= */
-function renderStock(){
-  var tb=document.getElementById("stockTable");
-  var keyword=(document.getElementById("search").value||"").toLowerCase();
-  tb.innerHTML="";
-  items.forEach((x,idx)=>{
-    if(keyword && !x.name.toLowerCase().includes(keyword)) return;
-    var tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${x.name}</td>
-      <td class="text-right">${x.qty||0}</td>
-      <td class="text-right">${Number(x.price||0).toFixed(2)}</td>
-      <td class="text-right">${(Number(x.qty||0)*Number(x.price||0)).toFixed(2)}</td>
-      <td class="text-right">${x.threshold||0}</td>
-      <td>${x.date_add||"-"}</td>
-      <td>${x.note||""}</td>
-      <td>
-        <button class="btn-primary btn-edit" data-id="${x.id}">แก้ไข</button>
-        <button class="btn-outline btn-delete" data-id="${x.id}">ลบ</button>
-      </td>`;
-    tb.appendChild(tr);
-  });
-}
-
-function renderDashboard(){
-  var totalItems=items.length;
-  var totalQty=items.reduce((s,x)=>s+Number(x.qty||0),0);
-  var totalValue=items.reduce((s,x)=>s+Number(x.qty||0)*Number(x.price||0),0);
-  var low=items.filter(x=>Number(x.qty||0)<=Number(x.threshold||0)&&Number(x.threshold||0)>0).length;
-  stat_total_items.innerText=totalItems+" รายการ";
-  stat_total_qty.innerText=totalQty+" ชิ้น";
-  stat_total_value.innerText=totalValue.toFixed(2);
-  stat_low_stock.innerText=low+" รายการ";
-}
-
-function renderHistory(){
-  var div=useHistory;
-  div.innerHTML="";
-  if(!historyData.length){div.innerHTML="<i>ยังไม่มีประวัติการเบิก</i>";return;}
-  historyData.slice().reverse().forEach(x=>{
-    var box=document.createElement("div");
-    box.className="history-card";
-    box.innerHTML=`<b>${x.name}</b> — เบิก ${x.qty} ชิ้น<br>
-    <span class="history-meta">
-    ผู้เบิก: ${x.by}<br>
-    วันที่เบิก: ${x.date}<br>
-    หมายเหตุ: ${x.note||"-"}<br>
-    บันทึกเมื่อ: ${x.time}</span>`;
-    div.appendChild(box);
-  });
-}
-
-/* ================= Actions ================= */
-function saveItem(){
+// Override saveItem to Firestore
+saveItem = function(){
   var n=name.value.trim();
   if(!n) return showPopup("แจ้งเตือน","กรุณากรอกชื่ออุปกรณ์");
-  var q=Number(qty.value)||0,p=Number(price.value)||0,t=Number(threshold.value)||0;
-  var d=date_add.value, noteVal=note.value.trim();
+  var q=Number(qty.value)||0;
+  var p=Number(price.value)||0;
+  var t=Number(threshold.value)||0;
+  var d=date_add.value;
+  var noteVal=note.value.trim();
 
   var found = items.find(x=>x.name===n);
   if(found){
@@ -137,9 +881,10 @@ function saveItem(){
     db.collection("items").add({name:n,qty:q,price:p,threshold:t,date_add:d,note:noteVal});
   }
   clearAddForm();
-}
+};
 
-function useItem(){
+// Override useItem to Firestore
+useItem = function(){
   var nameVal=use_name.value;
   var qtyVal=Number(use_qty.value)||0;
   var byVal=use_by.value.trim();
@@ -151,28 +896,17 @@ function useItem(){
   db.collection("items").doc(item.id).update({qty:item.qty-qtyVal});
   db.collection("history").add({
     name:nameVal,qty:qtyVal,by:byVal,date:dateVal,note:noteVal,
-    time:new Date().toLocaleString(), time_ts:firebase.firestore.FieldValue.serverTimestamp()
+    time:new Date().toLocaleString()
   });
   clearIssueForm();
-}
+};
 
-/* ================= Init ================= */
-document.addEventListener("DOMContentLoaded",()=>{
-  btnClosePopup.onclick=hidePopup;
-  btnSaveItem.onclick=saveItem;
-  btnUseItem.onclick=useItem;
-  btnSummaryDay.onclick=()=>showSummary("day");
-  btnSummaryMonth.onclick=()=>showSummary("month");
-  search.oninput=renderStock;
-
-  stockTable.onclick=e=>{
-    var id=e.target.dataset.id;
-    if(e.target.classList.contains("btn-delete")){
-      if(confirm("ลบข้อมูล?")) db.collection("items").doc(id).delete();
-    }
-  };
-
-  setupNav();
+document.addEventListener("DOMContentLoaded", ()=>{
   listenRealtime();
 });
 </script>
+<!-- ================= End Realtime Override ================= -->
+
+</body>
+</html>
+
