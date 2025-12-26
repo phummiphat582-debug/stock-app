@@ -1,8 +1,8 @@
 {
   "name": "ระบบสต็อกกิจกรรม",
   "short_name": "Stock",
-  "start_url": ".",
-  "scope": ".",
+  "start_url": "/stock-app/",
+  "scope": "/stock-app/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#245a92",
