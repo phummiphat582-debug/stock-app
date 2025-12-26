@@ -1,192 +1,178 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<title>ระบบสต็อกกิจกรรม - Enterprise UI V9 (แก้ไขสินค้าแบบ Popup)</title>
-
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<meta name="theme-color" content="#245a92">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- Firebase -->
+<!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBo8aIL2e1XLdS4BeOPEreXaA3IyWDTiHY",
-    authDomain: "stock-69302.firebaseapp.com",
-    projectId: "stock-69302",
-    storageBucket: "stock-69302.firebasestorage.app",
-    messagingSenderId: "301831402512",
-    appId: "1:301831402512:web:290a578b80c199314bc695"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
-
-<style>
-/* ===== CSS เดิมของคุณทั้งหมด ===== */
-*{box-sizing:border-box;font-family:'Segoe UI','Prompt',sans-serif;}
-body{margin:0;background:#edf1f7;color:#1f2933;}
-:root{--primary:#245a92;--primary-soft:#e4edf9;--sidebar:#1f3554;--accent:#ff8c42;}
-header{background:linear-gradient(90deg,#23466f,#245a92);color:white;padding:14px 22px;font-size:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(15,23,42,0.35);position:sticky;top:0;z-index:10;}
-header .title{display:flex;align-items:center;gap:10px;font-weight:600;}
-header .logo{width:34px;height:34px;border-radius:12px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:20px;}
-.layout{display:flex;min-height:calc(100vh - 62px);}
-.sidebar{width:240px;background:var(--sidebar);color:#e4ecf5;padding:18px 12px;display:flex;flex-direction:column;gap:18px;box-shadow:4px 0 12px rgba(15,23,42,0.35);}
-.nav-section-title{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;margin:4px 0 8px 6px;}
-.nav-btn{width:100%;text-align:left;padding:10px 12px;border-radius:16px;border:none;background:transparent;color:#e4ecf5;display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;}
-.nav-btn.active{background:#284874;box-shadow:0 3px 10px rgba(0,0,0,0.35);}
-.main{flex:1;padding:18px 20px;overflow:auto;}
-.section{display:none;}
-.section.active{display:block;}
-.section-title{font-size:20px;font-weight:600;margin:4px 0 8px;color:var(--primary);}
-.section-subtitle{font-size:13px;color:#6b7280;margin-bottom:14px;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
-.card{background:#fff;border-radius:18px;padding:18px 20px;border:1px solid #dde4ef;box-shadow:0 10px 25px rgba(15,23,42,0.10);}
-.stat-label{font-size:13px;color:#6b7280;}
-.stat-value{font-size:24px;font-weight:600;margin-top:4px;color:#111827;}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;margin-bottom:6px;}
-input,select,textarea{width:100%;padding:9px 10px;border-radius:9px;border:1px solid #c5ced9;background:#f9fbfd;}
-button{padding:9px 16px;border:none;border-radius:999px;cursor:pointer;}
-.btn-primary{background:var(--primary);color:white;}
-.btn-outline{background:white;border:1px solid var(--primary);color:var(--primary);}
-.btn-out{background:var(--accent);color:white;}
-table{width:100%;border-collapse:collapse;margin-top:10px;}
-th,td{padding:9px;border:1px solid #d0d7e0;font-size:13px;}
-th{background:#e1e8f0;}
-.text-right{text-align:right;}
-.history-card{background:#f9fbff;border:1px solid #d0d7e8;border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;}
-.history-meta{font-size:12px;color:#6b7280;}
-.popup-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,0.45);z-index:9999;}
-.popup-card{background:#fff;min-width:280px;max-width:560px;border-radius:16px;box-shadow:0 18px 40px rgba(15,23,42,0.55);padding:18px;}
-</style>
-</head>
-
-<body>
-<!-- ===== HTML เดิมของคุณทั้งหมด (ไม่เปลี่ยน) ===== -->
-<!-- ... (ส่วน HTML คงเดิมเหมือนที่คุณส่งมา) ... -->
 
 <script>
+/* ================= Firebase Init ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBo8aIL2e1XLdS4BeOPEreXaA3IyWDTiHY",
+  authDomain: "stock-69302.firebaseapp.com",
+  projectId: "stock-69302",
+  storageBucket: "stock-69302.firebasestorage.app",
+  messagingSenderId: "301831402512",
+  appId: "1:301831402512:web:290a578b80c199314bc695"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ================= Data ================= */
 var items = [];
 var historyData = [];
 
-/* ===== Popup เดิม ===== */
-function showPopup(t,c,isHtml){
-  popupTitle.innerText=t||"แจ้งเตือน";
-  if(isHtml) popupBody.innerHTML=c; else popupBody.innerText=c;
-  popupOverlay.style.display="flex";
+/* ================= Popup ================= */
+function showPopup(title, content, isHtml){
+  document.getElementById("popupTitle").innerText = title || "แจ้งเตือน";
+  var body = document.getElementById("popupBody");
+  body[isHtml ? "innerHTML" : "innerText"] = content;
+  document.getElementById("popupOverlay").style.display = "flex";
 }
-function hidePopup(){ popupOverlay.style.display="none"; }
+function hidePopup(){
+  document.getElementById("popupOverlay").style.display = "none";
+}
 
-/* ===== Firestore Realtime ===== */
+/* ================= Firestore Realtime ================= */
 function listenRealtime(){
   db.collection("items").onSnapshot(snap=>{
-    items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    items = [];
+    snap.forEach(doc=>{
+      items.push({ id: doc.id, ...doc.data() });
+    });
     updateDropdown();
     renderStock();
     renderDashboard();
   });
 
-  db.collection("history").orderBy("time","desc").onSnapshot(snap=>{
-    historyData = snap.docs.map(d=>{
-      let x=d.data();
-      if(x.time && x.time.toDate) x.time=x.time.toDate().toLocaleString();
-      return x;
+  db.collection("history").orderBy("time","asc").onSnapshot(snap=>{
+    historyData = [];
+    snap.forEach(doc=>{
+      historyData.push(doc.data());
     });
     renderHistory();
   });
 }
 
-/* ===== ฟังก์ชัน render / dropdown / dashboard / history ===== */
-/* (ใช้ของเดิมคุณทั้งหมด ไม่เปลี่ยน) */
+/* ================= Dropdown ================= */
+function updateDropdown(){
+  var sel = document.getElementById("use_name");
+  sel.innerHTML = "";
+  if(!items.length){
+    var opt=document.createElement("option");
+    opt.textContent="ยังไม่มีข้อมูลสต็อก";
+    sel.appendChild(opt);
+    return;
+  }
+  items.forEach(x=>{
+    var opt=document.createElement("option");
+    opt.value=x.name;
+    opt.textContent = x.name+" (เหลือ "+(x.qty||0)+")";
+    sel.appendChild(opt);
+  });
+}
 
-/* ===== Save item → Firestore ===== */
+/* ================= Render ================= */
+function renderStock(){
+  var tb=document.getElementById("stockTable");
+  var keyword=(document.getElementById("search").value||"").toLowerCase();
+  tb.innerHTML="";
+  items.forEach((x,idx)=>{
+    if(keyword && !x.name.toLowerCase().includes(keyword)) return;
+    var tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${x.name}</td>
+      <td class="text-right">${x.qty||0}</td>
+      <td class="text-right">${Number(x.price||0).toFixed(2)}</td>
+      <td class="text-right">${(Number(x.qty||0)*Number(x.price||0)).toFixed(2)}</td>
+      <td class="text-right">${x.threshold||0}</td>
+      <td>${x.date_add||"-"}</td>
+      <td>${x.note||""}</td>
+      <td>
+        <button class="btn-primary btn-edit" data-id="${x.id}">แก้ไข</button>
+        <button class="btn-outline btn-delete" data-id="${x.id}">ลบ</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderDashboard(){
+  var totalItems=items.length;
+  var totalQty=items.reduce((s,x)=>s+Number(x.qty||0),0);
+  var totalValue=items.reduce((s,x)=>s+Number(x.qty||0)*Number(x.price||0),0);
+  var low=items.filter(x=>Number(x.qty||0)<=Number(x.threshold||0)&&Number(x.threshold||0)>0).length;
+  stat_total_items.innerText=totalItems+" รายการ";
+  stat_total_qty.innerText=totalQty+" ชิ้น";
+  stat_total_value.innerText=totalValue.toFixed(2);
+  stat_low_stock.innerText=low+" รายการ";
+}
+
+function renderHistory(){
+  var div=useHistory;
+  div.innerHTML="";
+  if(!historyData.length){div.innerHTML="<i>ยังไม่มีประวัติการเบิก</i>";return;}
+  historyData.slice().reverse().forEach(x=>{
+    var box=document.createElement("div");
+    box.className="history-card";
+    box.innerHTML=`<b>${x.name}</b> — เบิก ${x.qty} ชิ้น<br>
+    <span class="history-meta">
+    ผู้เบิก: ${x.by}<br>
+    วันที่เบิก: ${x.date}<br>
+    หมายเหตุ: ${x.note||"-"}<br>
+    บันทึกเมื่อ: ${x.time}</span>`;
+    div.appendChild(box);
+  });
+}
+
+/* ================= Actions ================= */
 function saveItem(){
   var n=name.value.trim();
-  var q=Number(qty.value)||0;
-  var p=Number(price.value)||0;
-  var t=Number(threshold.value)||0;
-  var d=date_add.value;
-  var noteVal=note.value.trim();
-  if(!n){showPopup("แจ้งเตือน","กรุณากรอกชื่ออุปกรณ์");return;}
+  if(!n) return showPopup("แจ้งเตือน","กรุณากรอกชื่ออุปกรณ์");
+  var q=Number(qty.value)||0,p=Number(price.value)||0,t=Number(threshold.value)||0;
+  var d=date_add.value, noteVal=note.value.trim();
 
-  var ex=items.find(x=>x.name===n);
-  if(ex){
-    db.collection("items").doc(ex.id).update({
-      qty:(Number(ex.qty)||0)+q,price:p,threshold:t,date_add:d,note:noteVal
+  var found = items.find(x=>x.name===n);
+  if(found){
+    db.collection("items").doc(found.id).update({
+      qty:(Number(found.qty)||0)+q, price:p, threshold:t, date_add:d, note:noteVal
     });
   }else{
-    db.collection("items").add({
-      name:n,qty:q,price:p,threshold:t,date_add:d,note:noteVal
-    });
+    db.collection("items").add({name:n,qty:q,price:p,threshold:t,date_add:d,note:noteVal});
   }
   clearAddForm();
-  showPopup("สำเร็จ","บันทึกข้อมูลอุปกรณ์เรียบร้อยแล้ว");
 }
 
-/* ===== Use item ===== */
 function useItem(){
-  var n=use_name.value;
-  var q=Number(use_qty.value)||0;
-  var by=use_by.value.trim();
-  var d=use_date.value;
+  var nameVal=use_name.value;
+  var qtyVal=Number(use_qty.value)||0;
+  var byVal=use_by.value.trim();
+  var dateVal=use_date.value;
   var noteVal=use_note.value.trim();
-  if(!n||!by||!d){showPopup("แจ้งเตือน","กรอกข้อมูลให้ครบ");return;}
+  var item=items.find(x=>x.name===nameVal);
+  if(!item||item.qty<qtyVal) return showPopup("แจ้งเตือน","สินค้าไม่พอ");
 
-  var it=items.find(x=>x.name===n);
-  if(!it||it.qty<q){showPopup("แจ้งเตือน","สินค้าไม่พอ");return;}
-
-  db.collection("items").doc(it.id).update({qty:it.qty-q});
+  db.collection("items").doc(item.id).update({qty:item.qty-qtyVal});
   db.collection("history").add({
-    name:n,qty:q,by:by,date:d,note:noteVal,
-    time:firebase.firestore.FieldValue.serverTimestamp()
+    name:nameVal,qty:qtyVal,by:byVal,date:dateVal,note:noteVal,
+    time:new Date().toLocaleString(), time_ts:firebase.firestore.FieldValue.serverTimestamp()
   });
   clearIssueForm();
-  showPopup("สำเร็จ ✔","บันทึกการเบิกสินค้าเรียบร้อยแล้ว");
 }
 
-/* ===== Delete ===== */
-function deleteItemByIndex(idx){
-  var it=items[idx];
-  if(it && confirm("ต้องการลบ '"+it.name+"' ?")){
-    db.collection("items").doc(it.id).delete();
-  }
-}
-
-/* ===== Edit save ===== */
-btnSaveEdit.addEventListener("click",()=>{
-  var idx=Number(edit_index.value);
-  var it=items[idx];
-  if(!it) return;
-  db.collection("items").doc(it.id).update({
-    name:edit_name.value.trim(),
-    price:Number(edit_price.value)||0,
-    threshold:Number(edit_threshold.value)||0,
-    note:edit_note.value.trim()
-  });
-  popupEdit.style.display="none";
-  showPopup("สำเร็จ","แก้ไขสินค้าเรียบร้อยแล้ว");
-});
-
-/* ===== Init ===== */
+/* ================= Init ================= */
 document.addEventListener("DOMContentLoaded",()=>{
   btnClosePopup.onclick=hidePopup;
   btnSaveItem.onclick=saveItem;
   btnUseItem.onclick=useItem;
+  btnSummaryDay.onclick=()=>showSummary("day");
+  btnSummaryMonth.onclick=()=>showSummary("month");
+  search.oninput=renderStock;
+
+  stockTable.onclick=e=>{
+    var id=e.target.dataset.id;
+    if(e.target.classList.contains("btn-delete")){
+      if(confirm("ลบข้อมูล?")) db.collection("items").doc(id).delete();
+    }
+  };
+
   setupNav();
-  listenRealtime(); // 👈 ใช้ realtime แทน localStorage
+  listenRealtime();
 });
 </script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js');
-  });
-}
-</script>
-
-</body>
-</html>
