@@ -228,13 +228,93 @@
         </div>
       </div>
 
-      <div class="toolbar" style="margin-top:18px;">
-        <button class="btn-primary" id="btnSummaryDay">
-          <span>📅</span><span>สรุปยอดวันนี้</span>
-        </button>
-        <button class="btn-outline" id="btnSummaryMonth">
-          <span>🗓️</span><span>สรุปยอดเดือนนี้</span>
-        </button>
+      <!-- Summary controls -->
+      <div style="margin-top:18px;" class="card">
+        <div style="font-weight:600;color:var(--primary);margin-bottom:12px;font-size:15px;">📊 สรุปยอดการเบิก</div>
+        <div class="toolbar" style="margin:0 0 14px 0;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="margin:0;">เลือกช่วงเวลา</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-primary" id="btnSummaryDay" style="border-radius:999px;">📅 วันนี้</button>
+              <button class="btn-outline" id="btnSummaryMonth" style="border-radius:999px;">🗓️ เดือนนี้</button>
+              <button class="btn-outline" id="btnSummaryPickMonth" style="border-radius:999px;">📆 เลือกเดือน</button>
+            </div>
+          </div>
+          <!-- month picker (hidden by default) -->
+          <div id="monthPickerWrap" style="display:none;flex-direction:column;gap:4px;">
+            <label style="margin:0;">เลือกเดือน / ปี (พ.ศ.)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="pickMonth" style="width:120px;">
+                <option value="01">มกราคม</option>
+                <option value="02">กุมภาพันธ์</option>
+                <option value="03">มีนาคม</option>
+                <option value="04">เมษายน</option>
+                <option value="05">พฤษภาคม</option>
+                <option value="06">มิถุนายน</option>
+                <option value="07">กรกฎาคม</option>
+                <option value="08">สิงหาคม</option>
+                <option value="09">กันยายน</option>
+                <option value="10">ตุลาคม</option>
+                <option value="11">พฤศจิกายน</option>
+                <option value="12">ธันวาคม</option>
+              </select>
+              <select id="pickYear" style="width:100px;"></select>
+              <button class="btn-primary" id="btnGoPickMonth" style="border-radius:999px;">ดูสรุป</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary result rendered inline (not popup) -->
+        <div id="summaryResult" style="display:none;">
+          <div style="font-weight:600;color:#374151;margin-bottom:10px;font-size:14px;" id="summaryResultTitle"></div>
+
+          <div class="grid" style="margin-bottom:14px;">
+            <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;text-align:center;">
+              <div style="font-size:12px;color:#6b7280;">จำนวนครั้งที่เบิก</div>
+              <div id="sumCount" style="font-size:26px;font-weight:700;color:var(--primary);margin-top:4px;">0</div>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;text-align:center;">
+              <div style="font-size:12px;color:#6b7280;">จำนวนชิ้นที่เบิกรวม</div>
+              <div id="sumQty" style="font-size:26px;font-weight:700;color:#16a34a;margin-top:4px;">0</div>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;text-align:center;">
+              <div style="font-size:12px;color:#6b7280;">สต็อกรวมคงเหลือปัจจุบัน</div>
+              <div id="sumStock" style="font-size:26px;font-weight:700;color:#d97706;margin-top:4px;">0</div>
+            </div>
+          </div>
+
+          <!-- Table: แยกตามสินค้า -->
+          <div style="font-weight:600;color:#374151;margin-bottom:6px;font-size:13px;">รายละเอียดแยกตามอุปกรณ์</div>
+          <table id="sumByItemTable" style="margin-top:0;">
+            <thead>
+              <tr>
+                <th>ชื่ออุปกรณ์</th>
+                <th class="text-right">จำนวนที่เบิก (ชิ้น)</th>
+                <th class="text-right">จำนวนครั้ง</th>
+              </tr>
+            </thead>
+            <tbody id="sumByItemBody"></tbody>
+          </table>
+
+          <!-- Table: รายการเบิกทั้งหมด -->
+          <div style="font-weight:600;color:#374151;margin:16px 0 6px;font-size:13px;">รายการเบิกทั้งหมดในช่วงนี้</div>
+          <table style="margin-top:0;">
+            <thead>
+              <tr>
+                <th>วันที่เบิก</th>
+                <th>ชื่ออุปกรณ์</th>
+                <th class="text-right">จำนวน (ชิ้น)</th>
+                <th>ผู้เบิก</th>
+                <th>หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="sumDetailBody"></tbody>
+          </table>
+        </div>
+
+        <div id="summaryEmpty" style="color:#9ca3af;font-size:13px;font-style:italic;">
+          กดปุ่มด้านบนเพื่อดูสรุปยอด
+        </div>
       </div>
     </section>
 
@@ -688,31 +768,103 @@ function deleteItem(idx){
 }
 
 /* ===== SUMMARY ===== */
-function showSummary(mode){
-  var today = new Date();
-  var todayStr = today.toISOString().slice(0,10);
-  var ym = todayStr.slice(0,7);
+function renderSummaryInline(filtered, label){
+  var result = document.getElementById("summaryResult");
+  var empty  = document.getElementById("summaryEmpty");
 
-  var filtered = historyData.filter(function(x){
-    if(!x.date) return false;
-    if(mode==="day") return x.date===todayStr;
-    return x.date.slice(0,7)===ym;
+  if(!filtered.length){
+    result.style.display="none";
+    empty.style.display="block";
+    empty.textContent="ไม่พบข้อมูลการเบิกใน"+label;
+    return;
+  }
+
+  result.style.display="block";
+  empty.style.display="none";
+  document.getElementById("summaryResultTitle").textContent="📋 สรุปยอดการเบิก — "+label;
+
+  // stats
+  var totalQty = filtered.reduce(function(s,x){ return s+Number(x.qty||0); },0);
+  var totalNow = items.reduce(function(s,x){ return s+Number(x.qty||0); },0);
+  document.getElementById("sumCount").textContent = filtered.length+" ครั้ง";
+  document.getElementById("sumQty").textContent   = totalQty+" ชิ้น";
+  document.getElementById("sumStock").textContent  = totalNow+" ชิ้น";
+
+  // by-item table (นับทั้งจำนวนชิ้นและจำนวนครั้ง)
+  var byItem = {};
+  filtered.forEach(function(x){
+    if(!byItem[x.name]) byItem[x.name]={qty:0,count:0};
+    byItem[x.name].qty   += Number(x.qty||0);
+    byItem[x.name].count += 1;
+  });
+  var tbody = document.getElementById("sumByItemBody");
+  tbody.innerHTML="";
+  Object.keys(byItem).sort().forEach(function(n){
+    var tr=document.createElement("tr");
+    tr.innerHTML="<td>"+n+"</td>"+
+      "<td class='text-right'><b>"+byItem[n].qty+"</b></td>"+
+      "<td class='text-right'>"+byItem[n].count+"</td>";
+    tbody.appendChild(tr);
   });
 
-  var label = mode==="day" ? "วันนี้ ("+thaiDate(todayStr)+")" : "เดือนนี้";
-  if(!filtered.length){ showPopup("สรุปยอด "+label,"ยังไม่มีการเบิกในช่วงนี้"); return; }
+  // detail table — เรียงตามวันที่เบิก
+  var sorted = filtered.slice().sort(function(a,b){ return (a.date||"").localeCompare(b.date||""); });
+  var detBody = document.getElementById("sumDetailBody");
+  detBody.innerHTML="";
+  sorted.forEach(function(x){
+    var tr=document.createElement("tr");
+    tr.innerHTML="<td>"+thaiDate(x.date)+"</td>"+
+      "<td>"+x.name+"</td>"+
+      "<td class='text-right'><b>"+x.qty+"</b></td>"+
+      "<td>"+x.by+"</td>"+
+      "<td style='color:#6b7280;'>"+( x.note||"-")+"</td>";
+    detBody.appendChild(tr);
+  });
+}
 
-  var totalQty = filtered.reduce((s,x)=>s+Number(x.qty||0),0);
-  var byItem = {};
-  filtered.forEach(function(x){ byItem[x.name]=(byItem[x.name]||0)+Number(x.qty||0); });
-  var totalNow = items.reduce((s,x)=>s+Number(x.qty||0),0);
+function showSummary(mode, ym){
+  var today   = new Date();
+  var todayStr= today.toISOString().slice(0,10);
+  var targetYM= ym || todayStr.slice(0,7);
 
-  var html = "<p>จำนวนครั้งที่เบิก: <b>"+filtered.length+"</b><br>จำนวนที่เบิกรวม: <b>"+totalQty+"</b> ชิ้น</p>";
-  html += "<p><b>รายละเอียดแยกตามอุปกรณ์</b></p><ul>";
-  for(var n in byItem){ if(byItem.hasOwnProperty(n)) html+="<li>"+n+" : "+byItem[n]+" ชิ้น</li>"; }
-  html += "</ul><p>สต็อกคงเหลือรวมปัจจุบัน: <b>"+totalNow+"</b> ชิ้น</p>";
+  var thMonths=["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+                "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-  showPopup("สรุปยอดการเบิก "+label, html, true);
+  var label;
+  var filtered;
+  if(mode==="day"){
+    label = "วันนี้ ("+thaiDate(todayStr)+")";
+    filtered = historyData.filter(function(x){ return x.date && x.date===todayStr; });
+  } else {
+    // month mode — กรองตาม YYYY-MM ของ x.date เป๊ะๆ
+    var mm = targetYM.slice(5,7); // "MM"
+    var yy = Number(targetYM.slice(0,4));  // CE year
+    var buddhaYY = yy+543;
+    label = thMonths[Number(mm)]+" "+buddhaYY;
+    filtered = historyData.filter(function(x){
+      if(!x.date) return false;
+      // x.date เก็บเป็น "YYYY-MM-DD" (CE)
+      return x.date.slice(0,7)===targetYM;
+    });
+  }
+
+  renderSummaryInline(filtered, label);
+}
+
+/* populate year dropdown (5 ปีย้อนหลัง + ปีปัจจุบัน พ.ศ.) */
+function populateYearSelect(){
+  var sel = document.getElementById("pickYear");
+  sel.innerHTML="";
+  var now = new Date();
+  var ceCur = now.getFullYear();
+  for(var y=ceCur; y>=ceCur-4; y--){
+    var opt=document.createElement("option");
+    opt.value=y;           // ค่าเป็น CE ใช้กรอง
+    opt.textContent=(y+543); // แสดงเป็น พ.ศ.
+    sel.appendChild(opt);
+  }
+  // set default month = current
+  document.getElementById("pickMonth").value = String(now.getMonth()+1).padStart(2,"0");
 }
 
 /* ===== CLEAR ===== */
@@ -782,8 +934,24 @@ document.addEventListener("DOMContentLoaded",function(){
   // form buttons
   document.getElementById("btnSaveItem").addEventListener("click",saveItem);
   document.getElementById("btnUseItem").addEventListener("click",useItem);
-  document.getElementById("btnSummaryDay").addEventListener("click",function(){ showSummary("day"); });
-  document.getElementById("btnSummaryMonth").addEventListener("click",function(){ showSummary("month"); });
+
+  document.getElementById("btnSummaryDay").addEventListener("click",function(){
+    document.getElementById("monthPickerWrap").style.display="none";
+    showSummary("day");
+  });
+  document.getElementById("btnSummaryMonth").addEventListener("click",function(){
+    document.getElementById("monthPickerWrap").style.display="none";
+    showSummary("month");
+  });
+  document.getElementById("btnSummaryPickMonth").addEventListener("click",function(){
+    var w=document.getElementById("monthPickerWrap");
+    w.style.display = w.style.display==="none" ? "flex" : "none";
+  });
+  document.getElementById("btnGoPickMonth").addEventListener("click",function(){
+    var mm=document.getElementById("pickMonth").value;
+    var yy=document.getElementById("pickYear").value; // CE year string
+    showSummary("month", yy+"-"+mm);
+  });
 
   // name hint
   document.getElementById("name").addEventListener("input",checkExistingName);
@@ -805,6 +973,7 @@ document.addEventListener("DOMContentLoaded",function(){
   document.getElementById("date_add").value=today;
   document.getElementById("use_date").value=today;
 
+  populateYearSelect();
   setupNav();
   listenRealtime();
 });
