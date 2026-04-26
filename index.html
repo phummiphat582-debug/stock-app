@@ -629,11 +629,12 @@ function renderHistory(){
     var box = document.createElement("div");
     box.className="history-card";
     var ts = thaiDateTime(x.time_ts || x.time);
+    var nd = normalizeDate(x.date);
     box.innerHTML=
       "<b>"+x.name+"</b> — เบิก <b>"+x.qty+"</b> ชิ้น<br>"+
       "<span class='history-meta'>"+
       "ผู้เบิก: "+x.by+"<br>"+
-      "วันที่เบิก: "+thaiDate(x.date)+"<br>"+
+      "วันที่เบิก: "+thaiDate(nd)+"<br>"+
       (x.note?"หมายเหตุ: "+x.note+"<br>":"")+
       "บันทึกเมื่อ: "+ts+
       "</span>";
@@ -807,17 +808,22 @@ function renderSummaryInline(filtered, label){
     tbody.appendChild(tr);
   });
 
-  // detail table — เรียงตามวันที่เบิก
-  var sorted = filtered.slice().sort(function(a,b){ return (a.date||"").localeCompare(b.date||""); });
+  // detail table — เรียงตามวันที่เบิก normalize ก่อน sort
+  var sorted = filtered.slice().sort(function(a,b){
+    var da = (normalizeDate(a.date)||"9999-12-31") + (a.time||"");
+    var db2= (normalizeDate(b.date)||"9999-12-31") + (b.time||"");
+    return da.localeCompare(db2);
+  });
   var detBody = document.getElementById("sumDetailBody");
   detBody.innerHTML="";
   sorted.forEach(function(x){
+    var nd = normalizeDate(x.date);
     var tr=document.createElement("tr");
-    tr.innerHTML="<td>"+thaiDate(x.date)+"</td>"+
+    tr.innerHTML="<td>"+thaiDate(nd)+"</td>"+
       "<td>"+x.name+"</td>"+
       "<td class='text-right'><b>"+x.qty+"</b></td>"+
       "<td>"+x.by+"</td>"+
-      "<td style='color:#6b7280;'>"+( x.note||"-")+"</td>";
+      "<td style='color:#6b7280;'>"+(x.note||"-")+"</td>";
     detBody.appendChild(tr);
   });
 }
@@ -834,17 +840,19 @@ function showSummary(mode, ym){
   var filtered;
   if(mode==="day"){
     label = "วันนี้ ("+thaiDate(todayStr)+")";
-    filtered = historyData.filter(function(x){ return x.date && x.date===todayStr; });
+    filtered = historyData.filter(function(x){
+      var nd = normalizeDate(x.date);
+      return nd === todayStr;
+    });
   } else {
-    // month mode — กรองตาม YYYY-MM ของ x.date เป๊ะๆ
-    var mm = targetYM.slice(5,7); // "MM"
-    var yy = Number(targetYM.slice(0,4));  // CE year
+    var mm = targetYM.slice(5,7);
+    var yy = Number(targetYM.slice(0,4));
     var buddhaYY = yy+543;
     label = thMonths[Number(mm)]+" "+buddhaYY;
     filtered = historyData.filter(function(x){
-      if(!x.date) return false;
-      // x.date เก็บเป็น "YYYY-MM-DD" (CE)
-      return x.date.slice(0,7)===targetYM;
+      var nd = normalizeDate(x.date);
+      if(!nd) return false;
+      return nd.slice(0,7) === targetYM;
     });
   }
 
@@ -900,11 +908,38 @@ function listenRealtime(){
     renderStock();
     renderDashboard();
   });
-  db.collection("history").orderBy("time_ts","asc").onSnapshot(function(snap){
+
+  /* ไม่ใช้ orderBy("time_ts") เพราะ docs ที่ time_ts ยังเป็น null (pending serverTimestamp)
+     จะถูก Firestore exclude ออกจาก result โดยอัตโนมัติ ทำให้ข้อมูลหาย
+     ดึงทั้งหมดแล้ว sort ใน client แทน */
+  db.collection("history").onSnapshot(function(snap){
     historyData=[];
     snap.forEach(function(doc){ historyData.push(doc.data()); });
+    // sort by date string + time string ascending
+    historyData.sort(function(a,b){
+      var ka = (a.date||"9999-12-31") + "|" + (a.time||"");
+      var kb = (b.date||"9999-12-31") + "|" + (b.time||"");
+      return ka.localeCompare(kb);
+    });
     renderHistory();
   });
+}
+
+/* ===== NORMALIZE DATE to "YYYY-MM-DD" (CE) =====
+   รองรับ: "2025-04-26", "26/04/2025", "26-04-2025", Date object */
+function normalizeDate(val){
+  if(!val) return null;
+  if(typeof val === "string"){
+    val = val.trim();
+    // already YYYY-MM-DD
+    if(/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    // DD/MM/YYYY or DD-MM-YYYY
+    var m = val.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if(m) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+  }
+  if(val && typeof val.toDate === "function") val = val.toDate();
+  if(val instanceof Date && !isNaN(val)) return val.toISOString().slice(0,10);
+  return null;
 }
 
 /* ===== INIT ===== */
