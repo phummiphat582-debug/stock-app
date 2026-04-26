@@ -625,7 +625,15 @@ function renderHistory(){
     return;
   }
   div.innerHTML="";
-  historyData.slice().reverse().forEach(function(x){
+  var histSorted = historyData.slice().sort(function(a,b){
+    var ka = normalizeDate(a.date)||a.date||'';
+    var kb = normalizeDate(b.date)||b.date||'';
+    var ta = a.time||'';
+    var tb2= b.time||'';
+    // เรียงจากใหม่สุดไปเก่าสุด (desc)
+    return (kb+tb2).localeCompare(ka+ta);
+  });
+  histSorted.forEach(function(x){
     var box = document.createElement("div");
     box.className="history-card";
     var ts = thaiDateTime(x.time_ts || x.time);
@@ -750,7 +758,7 @@ function useItem(){
 
   db.collection("items").doc(item.id).update({qty:item.qty-qtyVal}).then(function(){
     return db.collection("history").add({
-      name:nameVal, qty:qtyVal, by:byVal, date:dateVal, note:noteVal,
+      name:nameVal, qty:qtyVal, by:byVal, date:toStorableDate(dateVal), note:noteVal,
       time:new Date().toISOString(),
       time_ts:firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -931,15 +939,30 @@ function normalizeDate(val){
   if(!val) return null;
   if(typeof val === "string"){
     val = val.trim();
-    // already YYYY-MM-DD
-    if(/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    // YYYY-MM-DD format
+    var m1 = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(m1){
+      var yr = Number(m1[1]);
+      // ถ้าปีเป็น พ.ศ. (> 2400) ให้แปลงเป็น ค.ศ.
+      if(yr > 2400) yr = yr - 543;
+      return yr+"-"+m1[2]+"-"+m1[3];
+    }
     // DD/MM/YYYY or DD-MM-YYYY
-    var m = val.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-    if(m) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+    var m2 = val.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if(m2){
+      var yr2 = Number(m2[3]);
+      if(yr2 > 2400) yr2 = yr2 - 543;
+      return yr2+"-"+m2[2].padStart(2,"0")+"-"+m2[1].padStart(2,"0");
+    }
   }
   if(val && typeof val.toDate === "function") val = val.toDate();
   if(val instanceof Date && !isNaN(val)) return val.toISOString().slice(0,10);
   return null;
+}
+
+/* แปลง date input value ให้เป็น CE เสมอก่อน save */
+function toStorableDate(inputVal){
+  return normalizeDate(inputVal) || inputVal;
 }
 
 /* ===== INIT ===== */
