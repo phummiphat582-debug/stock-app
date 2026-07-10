@@ -731,6 +731,26 @@ const fbConfig = {
 if(!firebase.apps.length) firebase.initializeApp(fbConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
+const BACKEND_API_BASE = localStorage.getItem('STORELINEBOT_API_BASE') || 'https://storelinebot.vercel.app';
+const WEBAPP_API_SECRET = localStorage.getItem('WEBAPP_API_SECRET') || '';
+
+function getBackendUrl(path){
+  if(BACKEND_API_BASE) return BACKEND_API_BASE.replace(/\/+$/,'')+path;
+  if(location.protocol==='file:') throw new Error('กรุณาตั้งค่า STORELINEBOT_API_BASE เป็น URL ของ Vercel ก่อนใช้งาน');
+  return path;
+}
+
+async function callWithdrawApi(payload){
+  if(!WEBAPP_API_SECRET) throw new Error('กรุณาตั้งค่า WEBAPP_API_SECRET ในเครื่องนี้ก่อนใช้งาน');
+  const res=await fetch(getBackendUrl('/api/withdraw'),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-webapp-secret':WEBAPP_API_SECRET},
+    body:JSON.stringify(payload)
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||'ระบบตัดสต๊อกผิดพลาด');
+  return data;
+}
 
 /* ════════════════ STATE ════════════════ */
 let items = [];
@@ -1183,13 +1203,11 @@ async function useItem(){
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try{
     const imgUrls=await uploadImages(issueImgFiles,'history','issueUploadBar','issueUploadProgress');
-    await db.collection('items').doc(item.id).update({ qty:(+item.qty||0)-qty });
-    await db.collection('history').add({
-      name, qty, by, date:normalizeDate(date)||date, note,
-      images:imgUrls,
-      time:new Date().toISOString(),
-      time_ts:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const noteParts=[];
+    if(note) noteParts.push(note);
+    if(date) noteParts.push('วันที่เบิกที่เลือก: '+(normalizeDate(date)||date));
+    if(imgUrls.length) noteParts.push('รูปภาพ: '+imgUrls.join(', '));
+    await callWithdrawApi({ itemId:item.id, qty, by, note:noteParts.join('\n') });
     clearIssueForm();
     toast('บันทึกการเบิกเรียบร้อย ✔','success');
   }catch(err){ toast('เกิดข้อผิดพลาด: '+err.message,'error'); }
@@ -1605,6 +1623,7 @@ function switchSumBtn(activeId){
 </script>
 </body>
 </html>
+
 
 
 
